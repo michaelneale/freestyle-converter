@@ -12,19 +12,28 @@ junit = soup.find('hudson.tasks.junit.junitresultarchiver')
 if not project: 
     exit("Not a freestyle project")
 
-print git_config
-print label
-#print soup.find('assignednamex')
-#print soup.find('command')
 builders = soup.find('builders')
 
+def shelly(script):
+    return "yeah sh"
+
+def bat(script):
+    return "yeah bat"
+
+def timeout(obj):
+    return "timey"
 
 builder_converters = {    
-    'hudson.tasks.shell' : 'shell',
-    'hudson.tasks.batchfile' : 'bat',
-    'hudson.plugins.build__timeout.buildstepwithtimeout' : 'timeout'
+    'hudson.tasks.shell' : shelly,
+    'hudson.tasks.batchfile' : bat,
+    'hudson.plugins.build__timeout.buildstepwithtimeout' : timeout
 }
 
+steps = []
+
 for builder in builders:     
-    if builder.name and builder.name in builder_converters:         
-        print "----> " + builder_converters[builder.name]
+    if builder.name and builder.name in builder_converters:                         
+        method = builder_converters[builder.name]
+        steps.append(method(builder))
+        
+print steps
