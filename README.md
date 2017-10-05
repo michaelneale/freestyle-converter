@@ -1,2 +1,3 @@
-pip install lxml
-pip install beautifulsoup4
+Experimental freestyle -> Jenkinsfile migrator command line tool
+
+`pip install -r requirements.txt`
