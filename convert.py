@@ -55,9 +55,8 @@ def assemble_steps(builders):
     return steps
 
 def render_agent(label):
-    print label
     if (label): 
-        return 'agent "' + label.text + '"'
+        return 'agent { \n\t\tlabel "' + label.text + '" \n\t}'
     else:    
         return 'agent any'        
 
@@ -65,13 +64,13 @@ def render_artifact(artifact):
     if (artifact):
         return 'archive "' + artifact.artifacts.text + '"'
     else:
-        return ''    
+        return 'echo "ok"'    
 
 def render_junit(junit):
     if (junit):
         return 'junit "' + junit.testresults.text + '"'
     else:
-        return ''
+        return 'echo "ok"'
     
 step_listing = assemble_steps(builders).replace('\n', '\n\t')       
     
