@@ -14,26 +14,55 @@ if not project:
 
 builders = soup.find('builders')
 
-def shelly(script):
-    return "yeah sh"
 
-def bat(script):
-    return "yeah bat"
 
-def timeout(obj):
-    return "timey"
+#
+# for all the builders we find, try to find an equivalent step
+#
+def assemble_steps(builders):
+    
+    #
+    # step rendering functions 
+    # ------------------------
+    # 
+    
+    def shell_step(script):
+        return '\tsh \'\'\' \n\t\t' + script.command.text + '\n\t\'\'\''
 
-builder_converters = {    
-    'hudson.tasks.shell' : shelly,
-    'hudson.tasks.batchfile' : bat,
-    'hudson.plugins.build__timeout.buildstepwithtimeout' : timeout
-}
+    def bat_step(script):
+        return '\tbat \'\'\' \n\t\t' + script.command.text + '\n\t\'\'\''
 
-steps = []
+    def timeout_step(obj):
+        return "timeout(time:" + obj.timeoutminutes.text + ", unit: 'MINUTES') {\n" + shell_step(obj) + "\n}" 
+    
+    # -------------------------
 
-for builder in builders:     
-    if builder.name and builder.name in builder_converters:                         
-        method = builder_converters[builder.name]
-        steps.append(method(builder))
+    # connect the xml tags to the appropriate function to render the step
+    builder_converters = {    
+        'hudson.tasks.shell' : shell_step,
+        'hudson.tasks.batchfile' : bat_step,
+        'hudson.plugins.build__timeout.buildstepwithtimeout' : timeout_step
+    }
+    
+    steps = []
+    for builder in builders:     
+        if builder.name and builder.name in builder_converters:                         
+            method = builder_converters[builder.name]            
+            steps.append(method(builder))
+    return steps
         
-print steps
+    
+step_listing = assemble_steps(builders)        
+    
+       
+        
+print """
+package {
+
+    
+
+
+}    
+"""
+            
+print step_listing[2]
