@@ -1,18 +1,21 @@
 from bs4 import BeautifulSoup
+from string import Template
 
 file = open('config.xml')
 soup = BeautifulSoup(file, 'lxml')
 
 project = soup.find('project')
 git_config = soup.find('hudson.plugins.git.userremoteconfig')
-label = soup.find('assignedname')
+label = soup.find('assignednode')
 artifact = soup.find('hudson.tasks.artifactarchiver')
 junit = soup.find('hudson.tasks.junit.junitresultarchiver')
+builders = soup.find('builders')
+
 
 if not project: 
     exit("Not a freestyle project")
 
-builders = soup.find('builders')
+
 
 
 
@@ -32,8 +35,8 @@ def assemble_steps(builders):
     def bat_step(script):
         return '\tbat \'\'\' \n\t\t' + script.command.text + '\n\t\'\'\''
 
-    def timeout_step(obj):
-        return "timeout(time:" + obj.timeoutminutes.text + ", unit: 'MINUTES') {\n" + shell_step(obj) + "\n}" 
+    def timeout_step(obj):        
+        return "\ttimeout(time:" + obj.timeoutminutes.text + ", unit: 'MINUTES') {\n\t" + shell_step(obj).replace('\n', '\n\t') + "\n\t}" 
     
     # -------------------------
 
@@ -44,25 +47,60 @@ def assemble_steps(builders):
         'hudson.plugins.build__timeout.buildstepwithtimeout' : timeout_step
     }
     
-    steps = []
+    steps = ''
     for builder in builders:     
         if builder.name and builder.name in builder_converters:                         
             method = builder_converters[builder.name]            
-            steps.append(method(builder))
+            steps = steps + '\n' + method(builder) + '\n'
     return steps
-        
+
+def render_agent(label):
+    print label
+    if (label): 
+        return 'agent "' + label.text + '"'
+    else:    
+        return 'agent any'        
+
+def render_artifact(artifact):
+    if (artifact):
+        return 'archive "' + artifact.artifacts.text + '"'
+    else:
+        return ''    
+
+def render_junit(junit):
+    if (junit):
+        return 'junit "' + junit.testresults.text + '"'
+    else:
+        return ''
     
-step_listing = assemble_steps(builders)        
+step_listing = assemble_steps(builders).replace('\n', '\n\t')       
     
        
-        
-print """
+template = Template("""
 package {
-
+    ${agent}
+    stages {
+        stage("Build") {
+            steps {
+                ${step_listing}
+            }            
+        }    
+    }
+    
+    post {
+        success {
+            ${archiver}
+        }
+        always {
+            ${junit}
+        }
+    }
     
 
-
 }    
-"""
-            
-print step_listing[2]
+""")       
+        
+print template.substitute({'step_listing' : step_listing, 
+                            'agent': render_agent(label),
+                            'archiver': render_artifact(artifact),
+                            'junit': render_junit(junit)})
